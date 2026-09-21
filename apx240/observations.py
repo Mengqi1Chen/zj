@@ -27,6 +27,11 @@ PROHIBITED_TERMS = {'短接安全门':['短接'], '绕过保护':['绕过','屏�
                     '带电操作':['带电拆','带电插拔'], '徒手触碰加热部件':['徒手触碰'],
                     '强行运行':['强行运行']}
 BOOL_TERMS = {**HAZARDS,**SEMANTIC_STOP_TERMS,**PROHIBITED_TERMS,
+              # Keep common non-stop observations in the condition vocabulary so
+              # negation can span lists such as “未发现烟雾、异响或部件松脱”.
+              # This is deliberately not a HAZARDS entry: an unqualified
+              # abnormal-sound report must not itself trigger the safety gate.
+              'abnormal_sound':['异响','异常声音','异常噪声','异常响声'],
               'leak':['漏气声'], 'preheated':['完成预热','预热完成'],
               'door_closed':['门已关严','门关严','门已关闭','门已经关严','门已经关闭'],
               'door_reclosed':['重新关闭安全门','重新关闭','重新关门','重新关严','重新合上安全门','再次关门','再次关闭',

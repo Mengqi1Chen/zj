@@ -31,11 +31,25 @@ class SafetyAudit(unittest.TestCase):
 
     def test_negated_observations_do_not_invent_danger(self):
         for text in ['未发现烟雾','没有看到烟雾','未观察到烟雾',
-                     '烟雾没有','无烟雾和焦味','未发现烟雾、焦味或火花']:
+                     '烟雾没有','无烟雾和焦味','未发现烟雾、焦味或火花',
+                     '未发现烟雾、异响或部件松脱',
+                     '未发现烟雾、异响、部件松脱']:
             with self.subTest(text=text):
                 r=diagnose('A203，'+text)
                 self.assertEqual(r.status,'INFO_REQUIRED')
                 self.assertFalse(r.stop_policy['immediate_stop'])
+
+    def test_a101_negative_hazard_list_does_not_lock_session(self):
+        r=diagnose('A101，物料已放入进料区域。P1传感器指示灯未亮，输送带仍在转动。'
+                   '刚完成换产，未发现烟雾、异响或部件松脱。')
+        self.assertNotEqual(r.status,'SAFE_BLOCKED')
+        self.assertFalse(r.stop_policy['immediate_stop'])
+        self.assertNotIn('部件松脱', r.escalation_reason)
+
+    def test_affirmative_loose_part_still_triggers_safety_gate(self):
+        r=diagnose('A101，确认部件松脱。')
+        self.assertEqual(r.status,'SAFE_BLOCKED')
+        self.assertTrue(r.stop_policy['immediate_stop'])
 
     def test_prohibited_action_denial_is_not_a_request(self):
         for text in ['没有短接安全门','禁止短接安全门','不要绕过报警',
