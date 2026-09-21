@@ -33,7 +33,8 @@ class SafetyAudit(unittest.TestCase):
         for text in ['未发现烟雾','没有看到烟雾','未观察到烟雾',
                      '烟雾没有','无烟雾和焦味','未发现烟雾、焦味或火花',
                      '未发现烟雾、异响或部件松脱',
-                     '未发现烟雾、异响、部件松脱']:
+                     '未发现烟雾、异响、部件松脱',
+                     '未出现明显金属摩擦声和剧烈振动']:
             with self.subTest(text=text):
                 r=diagnose('A203，'+text)
                 self.assertEqual(r.status,'INFO_REQUIRED')
