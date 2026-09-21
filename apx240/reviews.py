@@ -45,8 +45,8 @@ class ReviewStore:
     def apply(self,session_id,action,actor,note,questions,expected_revision,expected_review_revision,request_id):
         if action not in ['submit','claim','request_information','record_review']:
             raise ValueError('不支持该复核动作；本版本不能批准复机')
-        if not isinstance(actor,str) or not 1<=len(actor.strip())<=80:raise ValueError('请填写登记人姓名，最多80字')
-        if not isinstance(note,str) or not 1<=len(note.strip())<=2000:raise ValueError('请填写登记说明，最多2000字')
+        if not isinstance(actor,str) or len(actor.strip())>80:raise ValueError('登记人姓名最多80字')
+        if not isinstance(note,str) or len(note.strip())>2000:raise ValueError('登记说明最多2000字')
         if not isinstance(questions,list) or len(questions)>10 or any(not isinstance(q,str) or not 1<=len(q.strip())<=300 for q in questions):raise ValueError('待补信息最多10项，每项1–300字')
         if action=='request_information' and not questions:raise ValueError('退回补充信息时至少填写一项问题')
         if action in ['claim','record_review'] and questions:raise ValueError('开始复核或保存意见时不应填写待补问题')
@@ -65,6 +65,8 @@ class ReviewStore:
                 raise SessionConflict('报告或复核记录已更新，请载入最新版本后提交')
             if review and len(review['events'])>=100:raise ValueError('复核记录已达100次上限，请导出并人工整理')
             if action=='submit':
+                if not actor.strip():raise ValueError('提交复核时请填写登记人姓名')
+                if not note.strip():raise ValueError('提交复核时请填写复核说明')
                 if review and review['report_revision']==session['revision']:
                     raise SessionConflict('当前报告版本已进入复核，无需重复提交')
                 if not session.get('knowledge_snapshot_digest'):raise SessionConflict('旧报告缺完整知识快照，须人工核对后新建会话')
@@ -80,6 +82,17 @@ class ReviewStore:
                 transitions={'claim':('SUBMITTED','IN_REVIEW'),'request_information':('IN_REVIEW','NEEDS_INFORMATION'),'record_review':('IN_REVIEW','REVIEW_RECORDED')}
                 before,after=transitions[action]
                 if review['status']!=before:raise SessionConflict('当前复核状态不允许该动作')
+                if action=='claim':
+                    if not actor.strip():raise ValueError('开始复核时请填写复核人员')
+                    if not note.strip():note='已开始复核。'
+                elif action=='request_information':
+                    actor=actor.strip() or review.get('assignee','')
+                    if not actor:raise ValueError('请先开始复核并登记复核人员')
+                    if not note.strip():note='退回补充现场信息。'
+                elif action=='record_review':
+                    actor=actor.strip() or review.get('assignee','')
+                    if not actor:raise ValueError('请先开始复核并登记复核人员')
+                    if not note.strip():raise ValueError('保存复核意见时请填写复核说明')
                 review['status']=after
                 if action=='claim':review['assignee']=actor.strip()
                 review['questions']=questions

@@ -61,6 +61,13 @@ class Reviews(unittest.TestCase):
         with self.assertRaises(ValueError):self.action('request_information',2)
         self.assertEqual(self.reviews.get(self.sid)['revision'],2)
 
+    def test_return_information_can_reuse_assignee_without_new_note(self):
+        self.action('submit',0);self.action('claim',1)
+        review=self.reviews.apply(self.sid,'request_information','','',['请补充加热电流'],1,2,'return-with-defaults')
+        self.assertEqual(review['status'],'NEEDS_INFORMATION')
+        self.assertEqual(review['events'][-1]['actor_self_reported'],'测试登记人')
+        self.assertEqual(review['events'][-1]['note'],'退回补充现场信息。')
+
     def test_submit_can_include_initial_questions(self):
         result=self.action('submit',0,questions=['加热器两端电压是多少？'])
         self.assertEqual(result['status'],'SUBMITTED')
