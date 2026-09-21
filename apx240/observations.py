@@ -39,7 +39,10 @@ BOOL_TERMS = {**HAZARDS,**SEMANTIC_STOP_TERMS,**PROHIBITED_TERMS,
                                '重新合上','重新合上门','打开又重新合上','先打开又重新合上'],
               'alarm_persists':['仍然报警','仍报警','报警未消除','报警还在','报警仍存在','报警仍然存在',
                                 '报警依旧没有消失','报警依旧未消失','报警还是没有消失','报警没有消失'],
-              'material_present':['物料已到位','物料到位'], 'p1_lit':['P1灯亮','P1 灯亮']}
+              'material_present':['物料已到位','物料到位'],
+              'p1_lit':['P1灯亮','P1 灯亮','P1指示灯亮','P1 指示灯亮','P1指示灯关闭',
+                        'P1 指示灯关闭','P1指示灯熄灭','P1 指示灯熄灭','P1指示灯不亮',
+                        'P1 指示灯不亮','指示灯亮','指示灯关闭','指示灯熄灭','指示灯不亮']}
 # Common field-report denials. Keep verb forms such as “未出现” here so a
 # negation can scope over a following enumeration: “未出现明显金属摩擦声和剧烈振动”.
 NEG = r'(?:没有|没|未见|未发现|未观察到|未看到|未出现|未发生|未产生|未引发|不存在|无|未曾|从未|尚未|未|禁止|严禁|不要|避免|不允许|不应该|不应|不打算|不会|不能|不)'
@@ -47,7 +50,11 @@ UNCERTAIN = r'无法|不知道|不确定|不清楚|有没有|可能|疑似|似�
 KNOWN_CONDITION = '|'.join(re.escape(t) for t in sorted({t for ts in BOOL_TERMS.values() for t in ts},key=len,reverse=True))
 
 def normalize(text):
-    return unicodedata.normalize('NFKC', text).upper()
+    text=unicodedata.normalize('NFKC', text).upper()
+    # The web form can prepend “不存在” to a user phrase that already starts
+    # with “存在…”. Collapse that duplicate boundary before safety parsing.
+    text=re.sub(r'不存在\s*存在', '不存在', text)
+    return text
 
 def boolean_observation(text, terms):
     mentions=[]

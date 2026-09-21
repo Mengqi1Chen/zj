@@ -40,12 +40,31 @@ class SafetyAudit(unittest.TestCase):
                 self.assertEqual(r.status,'INFO_REQUIRED')
                 self.assertFalse(r.stop_policy['immediate_stop'])
 
+    def test_repeated_absence_prefix_does_not_create_positive_hazard(self):
+        r=diagnose('A203，不存在存在剧烈振动、金属摩擦、部件松脱、起火迹象。')
+        self.assertEqual(r.status,'INFO_REQUIRED')
+        self.assertFalse(r.stop_policy['immediate_stop'])
+
+    def test_real_presence_after_normalization_still_blocks(self):
+        r=diagnose('A203，存在剧烈振动。')
+        self.assertEqual(r.status,'SAFE_BLOCKED')
+
     def test_a101_negative_hazard_list_does_not_lock_session(self):
         r=diagnose('A101，物料已放入进料区域。P1传感器指示灯未亮，输送带仍在转动。'
                    '刚完成换产，未发现烟雾、异响或部件松脱。')
         self.assertNotEqual(r.status,'SAFE_BLOCKED')
         self.assertFalse(r.stop_policy['immediate_stop'])
         self.assertNotIn('部件松脱', r.escalation_reason)
+
+    def test_a101_indicator_wording_satisfies_p1_question(self):
+        for wording in ['指示灯关闭', '指示灯亮', 'P1 指示灯熄灭']:
+            with self.subTest(wording=wording):
+                r=diagnose('A101，物料已到位。'+wording+'，输送带仍在转动。')
+                self.assertNotIn('P1 指示灯状态', r.missing_information)
+
+    def test_a101_time_and_changeover_context_satisfies_combined_question(self):
+        r=diagnose('A101，物料已到位，P1指示灯亮。发生时间：今天上午10:35；是否换产：否，已连续生产4小时。')
+        self.assertNotIn('发生时间及是否换产', r.missing_information)
 
     def test_affirmative_loose_part_still_triggers_safety_gate(self):
         r=diagnose('A101，确认部件松脱。')

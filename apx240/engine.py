@@ -188,7 +188,13 @@ def diagnose(description, kb=None, *, safety_floor=None):
                     'differences_or_unknown':'原维修记录未声明报警码；按模块关联。本次部件状态未经验证，维修后验证值不代表当前读数。'})
     supplied={LABELS[k] for k in LABELS if single_value(observations,k) is not None}
     if observations['conditions']['material_present']['state'] in ['positive','negative']:supplied.add('物料是否到位')
-    if re.search(r'P1\s*(?:指示)?灯(?:不亮|亮|熄灭)',observations['current_text']):supplied.add('P1 指示灯状态')
+    if re.search(r'(?:P1\s*)?(?:指示)?灯(?:不亮|亮|熄灭|关闭)',observations['current_text']):supplied.add('P1 指示灯状态')
+    # A101 asks for one combined context item. Treat it as answered only when
+    # both the occurrence time and changeover status are present; otherwise keep
+    # the question visible so the operator is not led to believe it is complete.
+    if (re.search(r'(?:发生时间|故障时间|出现时间)\s*[:：]?\s*[^，。；;\n]+', observations['current_text'])
+            and re.search(r'(?:是否换产|刚?换产|换产)\s*[:：]?\s*[^，。；;\n]+', observations['current_text'])):
+        supplied.add('发生时间及是否换产')
     for key,label in [('leak','是否有漏气声'),('preheated','是否完成预热')]:
         if observations['conditions'][key]['state'] in ['positive','negative']: supplied.add(label)
     questions=[q for q in dict.fromkeys(questions) if q not in supplied]
