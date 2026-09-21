@@ -61,6 +61,11 @@ class Reviews(unittest.TestCase):
         with self.assertRaises(ValueError):self.action('request_information',2)
         self.assertEqual(self.reviews.get(self.sid)['revision'],2)
 
+    def test_submit_can_include_initial_questions(self):
+        result=self.action('submit',0,questions=['加热器两端电压是多少？'])
+        self.assertEqual(result['status'],'SUBMITTED')
+        self.assertEqual(result['questions'],['加热器两端电压是多少？'])
+
     def test_duplicate_submit_rejected(self):
         self.action('submit',0)
         with self.assertRaises(SessionConflict):self.action('submit',1)
