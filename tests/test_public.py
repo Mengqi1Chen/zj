@@ -20,8 +20,8 @@ class PublicAccess(unittest.TestCase):
         self.server.sessions=Mock();self.thread=threading.Thread(target=self.server.serve_forever,daemon=True);self.thread.start();self.addCleanup(self.stop)
     def stop(self):
         self.server.shutdown();self.server.server_close();self.thread.join()
-    def request(self,path='/',method='GET',authorized=True,origin=None):
-        headers={'Host':'demo.example','Content-Type':'application/json'}
+    def request(self,path='/',method='GET',authorized=True,origin=None,host='demo.example'):
+        headers={'Host':host,'Content-Type':'application/json'}
         if authorized:headers['Authorization']='Basic '+base64.b64encode((ENV['APX_ACCESS_USER']+':'+ENV['APX_ACCESS_PASSWORD']).encode()).decode()
         if origin:headers['Origin']=origin
         conn=http.client.HTTPConnection('127.0.0.1',self.server.server_port,timeout=5)
@@ -32,6 +32,11 @@ class PublicAccess(unittest.TestCase):
     def test_root_requires_password(self):
         status,challenge,_=self.request(authorized=False);self.assertEqual(status,401);self.assertIn('Basic',challenge)
         self.assertEqual(self.request()[0],200)
+    def test_authenticated_reads_work_through_proxy_host_rewrite(self):
+        self.assertEqual(self.request(host='internal-render-proxy')[0],200)
+        self.assertEqual(self.request('/manual.pdf',host='internal-render-proxy')[0],200)
+    def test_proxy_host_rewrite_does_not_relax_write_origin_check(self):
+        self.assertEqual(self.request('/api/sessions','POST',host='internal-render-proxy')[0],403)
     def test_health_requires_password(self):self.assertEqual(self.request('/health',authorized=False)[0],401)
     def test_manual_requires_password_and_serves_snapshot(self):
         self.assertEqual(self.request('/manual.pdf',authorized=False)[0],401)
