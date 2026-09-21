@@ -48,7 +48,8 @@ class ReviewStore:
         if not isinstance(actor,str) or not 1<=len(actor.strip())<=80:raise ValueError('请填写登记人姓名，最多80字')
         if not isinstance(note,str) or not 1<=len(note.strip())<=2000:raise ValueError('请填写登记说明，最多2000字')
         if not isinstance(questions,list) or len(questions)>10 or any(not isinstance(q,str) or not 1<=len(q.strip())<=300 for q in questions):raise ValueError('待补信息最多10项，每项1–300字')
-        if (action=='request_information')!=bool(questions):raise ValueError('仅要求补充信息时填写问题，且至少一项')
+        if action=='request_information' and not questions:raise ValueError('退回补充信息时至少填写一项问题')
+        if action in ['claim','record_review'] and questions:raise ValueError('开始复核或保存意见时不应填写待补问题')
         if type(expected_revision) is not int or expected_revision<1 or type(expected_review_revision) is not int or expected_review_revision<0:raise ValueError('复核版本无效')
         payload={'operation':'review','session_id':session_id,'action':action,'actor':actor,'note':note,'questions':questions,'expected_revision':expected_revision,'expected_review_revision':expected_review_revision}
         fingerprint=self.sessions._fingerprint(payload)
@@ -71,7 +72,7 @@ class ReviewStore:
                 packet={'report_revision':session['revision'],'knowledge_snapshot_digest':session['knowledge_snapshot_digest'],
                         'report':copy.deepcopy(session['latest_report']),'turns':copy.deepcopy(session['turns']),
                         'safety_latch':session['safety_latch'],'latch_events':copy.deepcopy(session['latch_events'])}
-                review.update(status='SUBMITTED',report_revision=session['revision'],assignee=None,questions=[],packet=packet)
+                review.update(status='SUBMITTED',report_revision=session['revision'],assignee=None,questions=questions,packet=packet)
                 review['submissions'].append(copy.deepcopy(packet))
             else:
                 if not review:raise SessionConflict('请先登记待复核报告')
